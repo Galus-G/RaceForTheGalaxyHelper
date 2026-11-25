@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -144,6 +145,7 @@ class MainActivity : ComponentActivity() {
 
     // Multi-Language State
     private var currentLanguage by mutableStateOf(Language.EN)
+    private var isCardViewEnabled by mutableStateOf(true)
 
     // Game State
     private var currentTurn by mutableIntStateOf(1)
@@ -553,7 +555,7 @@ class MainActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("v1.1.0", color = Color.Gray, fontSize = 12.sp)
+                Text("v1.1.1", color = Color.Gray, fontSize = 12.sp)
                 Text("by Galus", color = Color.Gray, fontSize = 12.sp)
             }
 
@@ -615,7 +617,25 @@ class MainActivity : ComponentActivity() {
                 Text(strings.turnFormat(currentTurn), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LanguageSelector()
+                    Button(
+                        onClick = {
+                            playClickSound()
+                            isCardViewEnabled = !isCardViewEnabled
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isCardViewEnabled) Color(0xFF00D2FF) else Color(0xFF1E293B)
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text(
+                            text = if (isCardViewEnabled) "CARD" else "TEXT",
+                            color = if (isCardViewEnabled) Color.Black else Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
                     Text(connectionStatus, color = if (connectionStatus == "Connected") Color.Green else Color.Red, fontSize = 12.sp)
                 }
             }
@@ -653,63 +673,238 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Selection
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(1),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                itemsIndexed(strings.actions) { index, actionItem ->
-                    val isSelectedByMe = playerActions[myPlayerIndex] == index
-                    val isSelectedByOthers = revealed && playerActions.indices.any { it != myPlayerIndex && playerActions[it] == index }
-                    
-                    val bgColor = Color(0xFF1E293B)
-                    
-                    val borderColor = when {
-                        revealed && isSelectedByMe -> backgroundColors[playerBgIndices.getOrElse(myPlayerIndex) { 0 }]
-                        revealed && isSelectedByOthers -> Color.White
-                        else -> Color.Transparent
-                    }
-                    
-                    val borderWidth = if (revealed && (isSelectedByMe || isSelectedByOthers)) 3.dp else 0.dp
+            // Action Selection: Text View vs Advanced Card View
+            if (!isCardViewEnabled) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(1),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    itemsIndexed(strings.actions) { index, actionItem ->
+                        val isSelectedByMe = playerActions[myPlayerIndex] == index
+                        val isSelectedByOthers = revealed && playerActions.indices.any { it != myPlayerIndex && playerActions[it] == index }
+                        
+                        val bgColor = Color(0xFF1E293B)
+                        
+                        val borderColor = when {
+                            revealed && isSelectedByMe -> backgroundColors[playerBgIndices.getOrElse(myPlayerIndex) { 0 }]
+                            revealed && isSelectedByOthers -> Color.White
+                            else -> Color.Transparent
+                        }
+                        
+                        val borderWidth = if (revealed && (isSelectedByMe || isSelectedByOthers)) 3.dp else 0.dp
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                            .background(bgColor, RoundedCornerShape(8.dp))
-                            .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
-                            .clickable(enabled = !revealed) {
-                                selectAction(index)
-                            }
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = getAnnotatedActionString(actionItem, isSelectedByMe, revealed),
-                                fontWeight = if (revealed && isSelectedByMe) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.weight(1f)
-                            )
-                            
-                            if (revealed) {
-                                val selectorPlayerIndices = mutableListOf<Int>()
-                                playerActions.forEachIndexed { pIdx, aIdx ->
-                                    if (aIdx == index) selectorPlayerIndices.add(pIdx)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .background(bgColor, RoundedCornerShape(8.dp))
+                                .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
+                                .clickable(enabled = !revealed) {
+                                    selectAction(index)
                                 }
-                                if (selectorPlayerIndices.isNotEmpty()) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            selectorPlayerIndices.forEachIndexed { sIdx, pIdx ->
-                                                if (sIdx > 0) append(", ")
-                                                val playerColor = backgroundColors[playerBgIndices.getOrElse(pIdx) { 0 }]
-                                                withStyle(SpanStyle(color = playerColor, fontWeight = FontWeight.Bold)) {
-                                                    append("${pIdx + 1}")
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = getAnnotatedActionString(actionItem, isSelectedByMe, revealed),
+                                    fontWeight = if (revealed && isSelectedByMe) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                
+                                if (revealed) {
+                                    val selectorPlayerIndices = mutableListOf<Int>()
+                                    playerActions.forEachIndexed { pIdx, aIdx ->
+                                        if (aIdx == index) selectorPlayerIndices.add(pIdx)
+                                    }
+                                    if (selectorPlayerIndices.isNotEmpty()) {
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                selectorPlayerIndices.forEachIndexed { sIdx, pIdx ->
+                                                    if (sIdx > 0) append(", ")
+                                                    val playerColor = backgroundColors[playerBgIndices.getOrElse(pIdx) { 0 }]
+                                                    withStyle(SpanStyle(color = playerColor, fontWeight = FontWeight.Bold)) {
+                                                        append("${pIdx + 1}")
+                                                    }
                                                 }
-                                            }
-                                        },
-                                        fontWeight = FontWeight.Bold
+                                            },
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // 5-Row Grouped Action Grid (White Background, Right-Side Tappable Bonuses, Exact Player Reveal)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(Color(0xFF0F172A), RoundedCornerShape(12.dp))
+                        .padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val rowsData = listOf(
+                        // Row I: Explore (left icon: a1_explore, roman: I, bonuses)
+                        Triple(R.drawable.a1_explore, "I", listOf(Pair(1, R.drawable.bonus_explore_plus5), Pair(0, R.drawable.bonus_explore_plus1))),
+                        // Row II: Develop (left icon: a2_develop, roman: II, bonuses)
+                        Triple(R.drawable.a2_develop, "II", listOf(Pair(2, R.drawable.bonus_develop))),
+                        // Row III: Settle (left icon: a3_settle, roman: III, bonuses)
+                        Triple(R.drawable.a3_settle, "III", listOf(Pair(3, R.drawable.bonus_settle))),
+                        // Row IV: Trade & Consume (left icon: a4_trade, roman: IV, bonuses)
+                        Triple(R.drawable.a4_trade, "IV", listOf(Pair(4, R.drawable.bonus_trade), Pair(5, R.drawable.bonus_consume))),
+                        // Row V: Produce (left icon: a5_produce, roman: V, bonuses)
+                        Triple(R.drawable.a5_produce, "V", listOf(Pair(6, R.drawable.bonus_windfall)))
+                    )
+
+                    rowsData.forEach { (mainIconRes, roman, bonusList) ->
+                        val phaseActionIndices = bonusList.map { it.first }
+                        val otherPlayersInPhase = mutableListOf<Int>()
+                        playerActions.forEachIndexed { pIdx, aIdx ->
+                            if (pIdx != myPlayerIndex && aIdx != null && phaseActionIndices.contains(aIdx)) {
+                                otherPlayersInPhase.add(pIdx)
+                            }
+                        }
+
+                        val myActionIdx = playerActions[myPlayerIndex]
+                        val didIChooseThisPhase = myActionIdx != null && phaseActionIndices.contains(myActionIdx)
+                        val isMainTriggered = revealed && (otherPlayersInPhase.isNotEmpty() || didIChooseThisPhase)
+
+                        val trigPlayerColor = if (revealed && otherPlayersInPhase.isNotEmpty()) {
+                            backgroundColors[playerBgIndices.getOrElse(otherPlayersInPhase.first()) { 0 }]
+                        } else if (revealed && didIChooseThisPhase) {
+                            backgroundColors[playerBgIndices.getOrElse(myPlayerIndex) { 0 }]
+                        } else {
+                            Color.Transparent
+                        }
+
+                        val mainIconBaseBg = if (isMainTriggered) Color.White else Color(0xFF64748B)
+                        val mainIconTint = Color.Transparent
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Left Main Action Icon (1/3 width: weight(1f))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(1f)
+                                        .background(mainIconBaseBg, RoundedCornerShape(4.dp))
+                                        .background(mainIconTint, RoundedCornerShape(4.dp))
+                                        .border(
+                                            width = if (isMainTriggered) 2.5.dp else 0.dp,
+                                            color = trigPlayerColor,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.foundation.Image(
+                                        painter = androidx.compose.ui.res.painterResource(id = mainIconRes),
+                                        contentDescription = "Main Phase",
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
                                     )
+
+                                    // Roman numeral badge in bottom-left corner
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomStart)
+                                            .padding(2.dp)
+                                            .background(Color(0xFF334155).copy(alpha = 0.7f), RoundedCornerShape(3.dp))
+                                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = roman,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 28.sp
+                                        )
+                                    }
+
+                                    if (isMainTriggered) {
+                                        Text(
+                                            text = otherPlayersInPhase.joinToString(",") { "${it + 1}" },
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = ":",
+                                    color = Color(0xFF94A3B8),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 28.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 2.dp)
+                                )
+
+                                // Right Bonus Tiles (2/3 total width: two 1/3 columns for Explore/Trade, or one 2/3 column for Develop/Settle/Produce)
+                                bonusList.forEach { (actionIdx, bonusIconRes) ->
+                                    val isSelectedByMe = playerActions[myPlayerIndex] == actionIdx
+                                    val myBonusSelector = if (revealed && isSelectedByMe) listOf(myPlayerIndex) else emptyList<Int>()
+                                    val playerCol = backgroundColors[playerBgIndices.getOrElse(myPlayerIndex) { 0 }]
+                                    
+                                    val bonusBaseBg = if (isSelectedByMe) Color.White else Color(0xFF64748B)
+                                    val bonusTint = if (isSelectedByMe) playerCol.copy(alpha = 0.3f) else Color.Transparent
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(if (bonusList.size == 1) 2f else 1f)
+                                            .background(bonusBaseBg, RoundedCornerShape(4.dp))
+                                            .background(bonusTint, RoundedCornerShape(4.dp))
+                                            .border(
+                                                width = if (revealed && myBonusSelector.isNotEmpty()) 2.5.dp else 0.dp,
+                                                color = if (revealed && myBonusSelector.isNotEmpty()) playerCol else Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .clickable(enabled = !revealed) {
+                                                selectAction(actionIdx)
+                                            }
+                                            .padding(2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = androidx.compose.ui.res.painterResource(id = bonusIconRes),
+                                            contentDescription = "Bonus Tile",
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+
+                                        if (revealed && myBonusSelector.isNotEmpty()) {
+                                            Text(
+                                                text = "${myPlayerIndex + 1}",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
+                                                    .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

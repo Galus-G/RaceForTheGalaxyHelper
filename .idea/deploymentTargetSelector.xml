@@ -23,10 +23,10 @@
       </SelectionState>
       <SelectionState runConfigName="New Run Config">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-11-22T19:41:32.809491400Z">
+        <DropdownSelection timestamp="2026-11-25T21:01:21.072825600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=ztaqs44to7duaa9t" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\gyula\.android\avd\Pixel_9_API_26.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -34,12 +34,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=ztaqs44to7duaa9t" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=158d53ac" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=158d53ac" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=ztaqs44to7duaa9t" />
               </handle>
             </Target>
           </targets>
